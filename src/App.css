@@ -178,3 +178,69 @@ nav a {
   gap: 10px;
   margin-top: 20px;
 }
+
+/* search + layout */
+.search-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.search-box input {
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+  font-size: 14px;
+  min-width: 200px;
+}
+
+.main-layout {
+  display: flex;
+  flex-direction: row;
+  gap: 20px;
+  padding: 20px;
+}
+
+.sidebar {
+  min-width: 200px;
+}
+
+.sidebar ul {
+  list-style: none;
+  padding: 0;
+}
+
+.sidebar li {
+  margin: 8px 0;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.sidebar li:hover {
+  color: var(--primary-color);
+}
+
+.product-list {
+  flex: 1;
+}
+
+.site-wrapper {
+  min-height: 100vh;
+  background-color: var(--bg-light);
+}
+
+.dark-mode.site-wrapper {
+  background-color: var(--bg-dark);
+  color: var(--text-light);
+}
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
