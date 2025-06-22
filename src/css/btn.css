@@ -1,0 +1,52 @@
+.btn,
+.btn-outline,
+.theme-toggle {
+  padding: 10px 16px;
+  border-radius: 10px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+}
+
+.btn {
+  background-color: var(--primary-color);
+  color: #fff;
+  border: none;
+}
+
+.btn:hover {
+  opacity: 0.9;
+}
+
+.btn-outline {
+  background: transparent;
+  border: 2px solid var(--primary-color);
+  color: var(--primary-color);
+}
+
+.btn-outline:hover {
+  background-color: var(--primary-color);
+  color: white;
+}
+
+.add-to-cart {
+  margin-top: auto;
+  padding: 10px;
+  font-weight: 600;
+  background-color: var(--accent, #d32f2f);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  transition: background 0.2s;
+  cursor: pointer;
+}
+
+.add-to-cart:hover:not(:disabled) {
+  background-color: var(--accent-hover, #d32f2f);
+}
+
+.add-to-cart:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+  color: #666;
+}

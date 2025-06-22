@@ -1,0 +1,21 @@
+html, body, #root {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  font-family: Arial, sans-serif;
+  background-color: var(--bg-light);
+  color: var(--text-dark);
+  transition: background-color 0.3s, color 0.3s;
+  overflow-x: hidden;
+}
+
+.site-wrapper {
+  min-height: 100vh;
+  background-color: var(--bg-light);
+}
+
+.container {
+  width: min(100%, 1400px);
+  margin: 0 auto;
+  padding: 20px;
+}
