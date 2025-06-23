@@ -2,6 +2,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { useEffect, useState } from "react";
 import LoginModal from "./LoginModal.jsx";
 import ProfileModal from "./ProfileModal";
+import { getCart } from "../utils/cart";
 import "../css/layout.css";
 import "../css/logo.css";
 import "../css/base.css";
@@ -21,6 +22,7 @@ export default function Layout({
   const [isAdmin, setIsAdmin] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [cartCount, setCartCount] = useState(0);
 
   useEffect(() => {
     const storedEmail = localStorage.getItem("email");
@@ -30,6 +32,20 @@ export default function Layout({
     if (storedEmail) setEmail(storedEmail);
     if (storedName) setUsername(storedName);
     setIsAdmin(storedAdmin);
+  }, []);
+
+  useEffect(() => {
+    const updateCartCount = () => {
+      const cart = getCart();
+      setCartCount(cart.reduce((sum, item) => sum + item.quantity, 0));
+    };
+    updateCartCount();
+    window.addEventListener("focus", updateCartCount);
+    window.addEventListener("cart-updated", updateCartCount);
+    return () => {
+      window.removeEventListener("focus", updateCartCount);
+      window.removeEventListener("cart-updated", updateCartCount);
+    };
   }, []);
 
   const handleLogout = () => {
@@ -60,7 +76,7 @@ export default function Layout({
       />
       <header className="header">
         <Link to="/" className="logo-link">
-          <img src="/iconm_d7591962.png" alt="Logo" />
+          <img src="/logo.svg" alt="Logo" />
           <div className="logo-text">
             <span className="logo-main">DocByte</span>
             <small className="logo-sub">интернет‑магазин</small>
@@ -79,8 +95,22 @@ export default function Layout({
           <button className="btn-outline" onClick={() => navigate("/")}>
             Каталог
           </button>
-          <button className="btn-outline" onClick={() => navigate("/cart")}>
+          <button className="btn-outline" onClick={() => navigate("/cart")}
+            style={{ position: "relative" }}>
             Корзина
+            {cartCount > 0 && (
+              <span style={{
+                position: "absolute",
+                top: -6,
+                right: -10,
+                background: "#e74c3c",
+                color: "#fff",
+                borderRadius: "50%",
+                padding: "2px 7px",
+                fontSize: "12px",
+                fontWeight: "bold"
+              }}>{cartCount}</span>
+            )}
           </button>
 
           {isAdmin && (

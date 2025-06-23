@@ -51,7 +51,6 @@ export default function LoginModal({ isOpen, onClose, onLogin }) {
       });
 
       const text = await response.text();
-      console.log("Raw response:", text);
 
       let data;
       try {
@@ -66,7 +65,6 @@ export default function LoginModal({ isOpen, onClose, onLogin }) {
             (mode === "login" ? "Ошибка входа" : "Ошибка регистрации")
         );
       } else {
-        console.log("Parsed data:", data);
         localStorage.setItem("username", data.username);
         localStorage.setItem("isAdmin", (data.isAdmin || false).toString());
 

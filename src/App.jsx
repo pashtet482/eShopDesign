@@ -1,7 +1,7 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import Layout from "./components/Layout";
 import Catalog from "./pages/catalog";
-import CartPage from "./pages/cartpage";
+import CartPage from "./pages/cart";
 import AdminPage from "./pages/AdminPage";
 import { useState } from "react";
 import "./css/base.css";
@@ -31,7 +31,7 @@ export default function App() {
       >
         <Routes>
           <Route path="/" element={<Catalog search={search} />} />
-          <Route path="/cart" element={<CartPage />} />
+          <Route path="/cart" element={<CartPage isDark={isDark} />} />
           <Route path="/admin" element={<AdminPage />} />
         </Routes>
       </Layout>

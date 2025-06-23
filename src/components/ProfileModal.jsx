@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import "../css/modals.css";
 import "../css/form&input.css";
 
-export default function ProfileModal({ isOpen, onClose, username: currentUsername, onNameChange }) {
+export default function ProfileModal({ isOpen, onClose, username: onNameChange }) {
   const username = localStorage.getItem("username");
 
   const [email, setEmail] = useState("");
