@@ -3,6 +3,7 @@ import Layout from "./components/Layout";
 import Catalog from "./pages/catalog";
 import CartPage from "./pages/cart";
 import AdminPage from "./pages/AdminPage";
+import OrdersPage from "./pages/orders-list";
 import { useState } from "react";
 import "./css/base.css";
 import "./css/btn.css";
@@ -32,6 +33,7 @@ export default function App() {
         <Routes>
           <Route path="/" element={<Catalog search={search} />} />
           <Route path="/cart" element={<CartPage isDark={isDark} />} />
+          <Route path="/orders" element={<OrdersPage />} />
           <Route path="/admin" element={<AdminPage />} />
         </Routes>
       </Layout>

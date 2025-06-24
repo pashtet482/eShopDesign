@@ -71,55 +71,57 @@ export default function Layout({
           const storedAdmin = localStorage.getItem("isAdmin") === "true";
           setEmail(storedEmail);
           setUsername(storedName);
-          setIsAdmin(storedAdmin);
-        }}
-      />
-      <header className="header">
-        <Link to="/" className="logo-link">
-          <img src="/logo.svg" alt="Logo" />
-          <div className="logo-text">
+            setIsAdmin(storedAdmin);
+          }}
+          />
+          <header className="header">
+          <Link to="/" className="logo-link">
+            <img src="/logo.svg" alt="Logo" />
+            <div className="logo-text">
             <span className="logo-main">DocByte</span>
             <small className="logo-sub">интернет‑магазин</small>
-          </div>
-        </Link>
+            </div>
+          </Link>
 
-        <input
-          type="text"
-          placeholder="Поиск товаров..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="search-input"
-        />
+          <input
+            type="text"
+            placeholder="Поиск товаров..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="search-input"
+          />
 
-        <div className="action-buttons">
-          <button className="btn-outline" onClick={() => navigate("/")}>
+          <div className="action-buttons">
+            <button className="btn-outline" onClick={() => navigate("/")}>
             Каталог
-          </button>
-          <button className="btn-outline" onClick={() => navigate("/cart")}
+            </button>
+            <button className="btn-outline" onClick={() => navigate("/cart")}
             style={{ position: "relative" }}>
             Корзина
             {cartCount > 0 && (
               <span style={{
-                position: "absolute",
-                top: -6,
-                right: -10,
-                background: "#e74c3c",
-                color: "#fff",
-                borderRadius: "50%",
-                padding: "2px 7px",
-                fontSize: "12px",
-                fontWeight: "bold"
+              position: "absolute",
+              top: -6,
+              right: -10,
+              background: "#e74c3c",
+              color: "#fff",
+              borderRadius: "50%",
+              padding: "2px 7px",
+              fontSize: "12px",
+              fontWeight: "bold"
               }}>{cartCount}</span>
             )}
-          </button>
+            </button>
 
-          {isAdmin && (
+            <button className="btn-outline" onClick={() => navigate("/orders")}>Мои заказы</button>
+
+            {isAdmin && (
             <button className="btn-outline" onClick={() => navigate("/admin")}>
               Админка
             </button>
-          )}
+            )}
 
-          <button
+            <button
             className="btn-outline"
             onClick={() =>
               setIsDark((prev) => {

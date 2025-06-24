@@ -67,7 +67,7 @@ export default function LoginModal({ isOpen, onClose, onLogin }) {
       } else {
         localStorage.setItem("username", data.username);
         localStorage.setItem("isAdmin", (data.isAdmin || false).toString());
-
+        localStorage.setItem("userId", data.userId);
         onLogin();
         onClose();
         resetFields();
