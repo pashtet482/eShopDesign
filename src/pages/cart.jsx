@@ -6,6 +6,7 @@ import {
   addToCart,
   decreaseFromCart,
 } from "../utils/cart";
+import { formatPrice } from "../utils/formatPrice";
 
 function getImageUrl(base, path, placeholder) {
   if (!path)
@@ -101,9 +102,25 @@ export default function CartPage({ isDark }) {
                     display: "flex",
                     alignItems: "center",
                     gap: 24,
+                    background: isDark ? "var(--background-secondary, #232323)" : "#fafbfc",
+                    borderRadius: 12,
+                    boxShadow: "0 2px 8px #0001",
+                    padding: 16,
                   }}
                 >
-                  <img src={imageUrl} alt={item.name} />
+                  <img
+                    src={imageUrl}
+                    alt={item.name}
+                    style={{
+                      maxWidth: 90,
+                      maxHeight: 90,
+                      borderRadius: 10,
+                      objectFit: "cover",
+                      background: "#fff",
+                      boxShadow: "0 1px 4px #0001",
+                      marginRight: 8,
+                    }}
+                  />
                   <div style={{ flex: 1 }}>
                     <div style={{ fontWeight: 600, fontSize: 20 }}>
                       {item.name}
@@ -119,7 +136,7 @@ export default function CartPage({ isDark }) {
                   </div>
                   <div style={{ minWidth: 120, textAlign: "right" }}>
                     <div style={{ fontWeight: 500, fontSize: 18 }}>
-                      {item.price} ₽
+                      {formatPrice(item.price)} ₽
                     </div>
                   </div>
                   <div
@@ -210,7 +227,7 @@ export default function CartPage({ isDark }) {
             }}
           >
             <span>Итого:</span>
-            <span style={{ color: "#27ae60" }}>{total} ₽</span>
+            <span style={{ color: "#27ae60" }}>{formatPrice(total)} ₽</span>
           </div>
           <button
             className="btn"

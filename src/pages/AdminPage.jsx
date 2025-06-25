@@ -3,6 +3,7 @@ import "../css/base.css";
 import "../css/layout.css";
 import "../css/orders-list.css";
 import "../css/admin-panel.css";
+import { formatPrice } from "../utils/formatPrice";
 
 const TABLES = [
   { key: "products", label: "Товары" },
@@ -33,14 +34,20 @@ function AdminPage() {
   const [users, setUsers] = useState([]);
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [editRows, setEditRows] = useState({}); // Для редактирования
   const [filter, setFilter] = useState("");
   const [orderStatusDraft, setOrderStatusDraft] = useState({});
   const [modal, setModal] = useState({ open: false, type: null });
-  const [modalData, setModalData] = useState({});
-  // --- добавлено для загрузки изображения ---
+  const [MODALDATA, setModalData] = useState({});
   const [file, setFile] = useState(null);
   const [imagePreview, setImagePreview] = useState("");
+  const [orderDateFilter, setOrderDateFilter] = useState("");
+  const [editProduct, setEditProduct] = useState(null);
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [editFile, setEditFile] = useState(null);
+  const [editImagePreview, setEditImagePreview] = useState("");
+  const [modalError, setModalError] = useState("");
+
+  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "";
 
   const uploadProductImage = async (file) => {
     if (!file) return "";
@@ -88,27 +95,34 @@ function AdminPage() {
     }
   }, [activeTable]);
 
-  // CRUD-заготовки (реализуйте API)
-  const handleAdd = () => {
-    /* ... */
-  };
-  const handleEdit = (id, field, value) => {
-    /* ... */
-  };
-  const handleDelete = (id) => {
-    /* ... */
-  };
-  const handleSave = () => {
-    /* ... */
-  };
-
-  // Для orders: смена статуса заказа
   const handleOrderStatusChange = (orderId, newStatus) => {
     setOrderStatusDraft((prev) => ({ ...prev, [orderId]: newStatus }));
   };
-  const handleOrderStatusSave = (orderId) => {
-    // TODO: отправить PATCH/PUT на сервер
-    // fetch(`/api/orders/${orderId}/status`, ...)
+  const statusRuToEn = {
+    Оформлен: "PENDING",
+    Отправлен: "SHIPPED",
+    Доставлен: "DELIVERED",
+    Отменён: "CANCELLED",
+  };
+  const handleOrderStatusSave = async (orderId) => {
+    setLoading(true);
+    const ruStatus =
+      orderStatusDraft[orderId] ?? orders.find((o) => o.id === orderId)?.status;
+    const newStatus = statusRuToEn[ruStatus] || ruStatus;
+    try {
+      await fetch("/api/orders/change-status", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: orderId, status: newStatus }),
+      });
+      fetch("/api/orders")
+        .then((r) => r.json())
+        .then(setOrders)
+        .finally(() => setLoading(false));
+    } catch {
+      setLoading(false);
+      alert("Ошибка при смене статуса заказа");
+    }
   };
 
   const openAddModal = (type) => {
@@ -117,62 +131,127 @@ function AdminPage() {
   };
   const closeModal = () => setModal({ open: false, type: null });
 
-  // Добавление товара с автоматической загрузкой изображения
   const handleAddProduct = async (data) => {
     setLoading(true);
     let imageUrl = null;
     if (file) {
       imageUrl = await uploadProductImage(file);
     }
-    await fetch("/products/create-product", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...data, imageUrl }),
-    });
-    setModal({ open: false, type: null });
-    setFile(null);
-    setImagePreview("");
-    // Обновить список
-    fetch("/products/products")
-      .then((r) => r.json())
-      .then(setProducts)
-      .finally(() => setLoading(false));
+    try {
+      const res = await fetch("/products/create-product", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...data, imageUrl }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.message || "Ошибка добавления товара");
+      }
+      setModal({ open: false, type: null });
+      setFile(null);
+      setImagePreview("");
+      fetch("/products/products")
+        .then((r) => r.json())
+        .then(setProducts)
+        .finally(() => setLoading(false));
+    } catch (e) {
+      setLoading(false);
+      throw e;
+    }
   };
-  // Удаление товара
-  const handleDeleteProduct = async (id) => {
-    setLoading(true);
-    await fetch(`/products/delete-product/${id}`, { method: "DELETE" });
-    fetch("/products/products")
-      .then((r) => r.json())
-      .then(setProducts)
-      .finally(() => setLoading(false));
-  };
-  // Добавление категории
+
   const handleAddCategory = async (data) => {
     setLoading(true);
-    await fetch("/categories/create-category", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data),
-    });
-    setModal({ open: false, type: null });
-    fetch("/categories/get-all-categories")
-      .then((r) => r.json())
-      .then(setCategories)
-      .finally(() => setLoading(false));
+    try {
+      const res = await fetch("/categories/create-category", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.message || "Ошибка добавления категории");
+      }
+      setModal({ open: false, type: null });
+      fetch("/categories/get-all-categories")
+        .then((r) => r.json())
+        .then(setCategories)
+        .finally(() => setLoading(false));
+    } catch (e) {
+      setLoading(false);
+      throw e;
+    }
   };
-  // Удаление категории
-  const handleDeleteCategory = async (name) => {
+
+  const openEditModal = (product) => {
+    setEditProduct({ ...product, categoryId: product.category?.id });
+    setEditImagePreview(
+      product.imageUrl
+        ? product.imageUrl.startsWith("http")
+          ? product.imageUrl
+          : `${API_BASE_URL?.replace(/\/$/, "")}/${product.imageUrl.replace(
+              /^\//,
+              ""
+            )}`
+        : ""
+    );
+    setEditModalOpen(true);
+  };
+  const closeEditModal = () => {
+    setEditModalOpen(false);
+    setEditProduct(null);
+    setEditFile(null);
+    setEditImagePreview("");
+  };
+  const handleEditFileChange = (e) => {
+    setEditFile(e.target.files[0]);
+    setEditImagePreview(
+      e.target.files[0] ? URL.createObjectURL(e.target.files[0]) : ""
+    );
+  };
+  const handleEditProductChange = (field, value) => {
+    setEditProduct((prev) => ({ ...prev, [field]: value }));
+  };
+  const handleEditProductSave = async () => {
     setLoading(true);
-    await fetch(`/categories/delete-category`, {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name }),
-    });
-    fetch("/categories/get-all-categories")
-      .then((r) => r.json())
-      .then(setCategories)
-      .finally(() => setLoading(false));
+    let imageUrl = editProduct.imageUrl;
+    if (editFile) {
+      imageUrl = await uploadProductImage(editFile);
+    }
+    const updated = {
+      ...editProduct,
+      imageUrl,
+      price: Number(editProduct.price),
+      stockQuantity: Number(editProduct.stockQuantity),
+      category: {
+        id: Number(editProduct.categoryId),
+        name:
+          categories.find((c) => c.id === Number(editProduct.categoryId))
+            ?.name || "",
+      },
+    };
+    try {
+      const res = await fetch(`/products/update-product/${editProduct.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updated),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.message || "Ошибка редактирования товара");
+      }
+      setEditModalOpen(false);
+      setEditProduct(null);
+      setEditFile(null);
+      setEditImagePreview("");
+      setProducts((prev) =>
+        prev.map((p) => (p.id === updated.id ? { ...updated } : p))
+      );
+      setLoading(false);
+    } catch (e) {
+      setLoading(false);
+      throw e;
+    }
   };
 
   return (
@@ -245,13 +324,6 @@ function AdminPage() {
               >
                 Добавить товар
               </button>
-              <button
-                className="admin-btn"
-                style={{ minWidth: 170 }}
-                onClick={handleSave}
-              >
-                Сохранить изменения
-              </button>
             </div>
             <table className="admin-table">
               <thead>
@@ -262,7 +334,7 @@ function AdminPage() {
                   <th>Описание</th>
                   <th>Цена</th>
                   <th>В наличии</th>
-                  <th></th>
+                  <th>Изображение</th>
                 </tr>
               </thead>
               <tbody>
@@ -271,50 +343,42 @@ function AdminPage() {
                     p.name.toLowerCase().includes(filter.toLowerCase())
                   )
                   .map((p) => (
-                    <tr key={p.id}>
+                    <tr
+                      key={p.id}
+                      onClick={() => openEditModal(p)}
+                      style={{ cursor: "pointer" }}
+                    >
                       <td>{p.id}</td>
                       <td>{p.name}</td>
-                      <td>
-                        <select
-                          value={p.category?.id || ""}
-                          onChange={(e) =>
-                            handleEdit(p.id, "categoryId", e.target.value)
-                          }
-                        >
-                          <option value="">---</option>
-                          {categories.map((c) => (
-                            <option key={c.id} value={c.id}>
-                              {c.name}
-                            </option>
-                          ))}
-                        </select>
-                      </td>
+                      <td>{p.category?.name || "-"}</td>
                       <td>{p.description}</td>
+                      <td>{formatPrice(p.price)}</td>
+                      <td>{p.stockQuantity}</td>
                       <td>
-                        <input
-                          type="number"
-                          value={p.price}
-                          onChange={(e) =>
-                            handleEdit(p.id, "price", e.target.value)
-                          }
-                        />
-                      </td>
-                      <td>
-                        <input
-                          type="number"
-                          value={p.stockQuantity}
-                          onChange={(e) =>
-                            handleEdit(p.id, "stockQuantity", e.target.value)
-                          }
-                        />
-                      </td>
-                      <td>
-                        <button
-                          className="admin-btn danger"
-                          onClick={() => handleDeleteProduct(p.id)}
-                        >
-                          Удалить
-                        </button>
+                        {p.imageUrl ? (
+                          <img
+                            src={
+                              p.imageUrl.startsWith("http")
+                                ? p.imageUrl
+                                : `${API_BASE_URL?.replace(
+                                    /\/$/,
+                                    ""
+                                  )}/${p.imageUrl.replace(/^\//, "")}`
+                            }
+                            alt="preview"
+                            style={{
+                              maxWidth: 60,
+                              maxHeight: 60,
+                              borderRadius: 6,
+                              border: "1px solid #ccc",
+                              background: "#fff",
+                            }}
+                          />
+                        ) : (
+                          <span style={{ color: "#aaa", fontSize: 12 }}>
+                            нет
+                          </span>
+                        )}
                       </td>
                     </tr>
                   ))}
@@ -327,12 +391,24 @@ function AdminPage() {
                 closeModal();
                 setFile(null);
                 setImagePreview("");
+                setModalError("");
               }}
             >
               {/* Форма добавления товара */}
               <div
                 style={{ display: "flex", flexDirection: "column", gap: 14 }}
               >
+                {modalError && (
+                  <div
+                    style={{
+                      color: "#d32f2f",
+                      fontWeight: 500,
+                      marginBottom: 4,
+                    }}
+                  >
+                    {modalError}
+                  </div>
+                )}
                 <input id="add-product-name" placeholder="Название" />
                 <select id="add-product-category">
                   <option value="">Выберите категорию</option>
@@ -352,19 +428,30 @@ function AdminPage() {
                   placeholder="В наличии"
                   type="number"
                 />
-                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => {
-                      setFile(e.target.files[0]);
-                      setImagePreview(
-                        e.target.files[0]
-                          ? URL.createObjectURL(e.target.files[0])
-                          : ""
-                      );
-                    }}
-                  />
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 10,
+                    flexDirection: "row",
+                  }}
+                >
+                  <label className="admin-file-btn">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      style={{ display: "none" }}
+                      onChange={(e) => {
+                        setFile(e.target.files[0]);
+                        setImagePreview(
+                          e.target.files[0]
+                            ? URL.createObjectURL(e.target.files[0])
+                            : ""
+                        );
+                      }}
+                    />
+                    <span>Выбрать изображение</span>
+                  </label>
                   {imagePreview && (
                     <img
                       src={imagePreview}
@@ -374,6 +461,7 @@ function AdminPage() {
                         maxHeight: 80,
                         borderRadius: 8,
                         border: "1px solid #ccc",
+                        marginLeft: 0,
                       }}
                     />
                   )}
@@ -386,6 +474,7 @@ function AdminPage() {
                       closeModal();
                       setFile(null);
                       setImagePreview("");
+                      setModalError("");
                     }}
                   >
                     Отмена
@@ -394,6 +483,7 @@ function AdminPage() {
                     className="admin-btn"
                     style={{ minWidth: 120 }}
                     onClick={async () => {
+                      setModalError("");
                       const name =
                         document.querySelector("#add-product-name").value;
                       const price = Number(
@@ -408,13 +498,17 @@ function AdminPage() {
                       const description = document.querySelector(
                         "#add-product-description"
                       ).value;
-                      await handleAddProduct({
-                        name,
-                        description,
-                        price,
-                        stockQuantity,
-                        category: { id: categoryId },
-                      });
+                      try {
+                        await handleAddProduct({
+                          name,
+                          description,
+                          price,
+                          stockQuantity,
+                          category: { id: categoryId },
+                        });
+                      } catch (e) {
+                        setModalError(e.message || "Ошибка добавления товара");
+                      }
                     }}
                   >
                     Добавить
@@ -422,6 +516,169 @@ function AdminPage() {
                 </div>
               </div>
             </AdminModal>
+            {editModalOpen && (
+              <div className="admin-modal-backdrop" onClick={closeEditModal}>
+                <div
+                  className="admin-modal"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <button
+                    className="admin-modal-close"
+                    onClick={closeEditModal}
+                  >
+                    &times;
+                  </button>
+                  <h3>Редактировать товар</h3>
+                  <div
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: 14,
+                    }}
+                  >
+                    {modalError && (
+                      <div
+                        style={{
+                          color: "#d32f2f",
+                          fontWeight: 500,
+                          marginBottom: 4,
+                        }}
+                      >
+                        {modalError}
+                      </div>
+                    )}
+                    <label>
+                      Название
+                      <input
+                        value={editProduct.name}
+                        onChange={(e) =>
+                          handleEditProductChange("name", e.target.value)
+                        }
+                        placeholder="Название"
+                      />
+                    </label>
+                    <label>
+                      Категория
+                      <select
+                        value={editProduct.categoryId}
+                        onChange={(e) =>
+                          handleEditProductChange("categoryId", e.target.value)
+                        }
+                      >
+                        <option value="">Выберите категорию</option>
+                        {categories.map((c) => (
+                          <option key={c.id} value={c.id}>
+                            {c.name}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label>
+                      Цена
+                      <input
+                        value={editProduct.price}
+                        type="number"
+                        onChange={(e) =>
+                          handleEditProductChange("price", e.target.value)
+                        }
+                        placeholder="Цена"
+                      />
+                    </label>
+                    <label>
+                      В наличии
+                      <input
+                        value={editProduct.stockQuantity}
+                        type="number"
+                        onChange={(e) =>
+                          handleEditProductChange(
+                            "stockQuantity",
+                            e.target.value
+                          )
+                        }
+                        placeholder="В наличии"
+                      />
+                    </label>
+                    <label>
+                      Описание
+                      <input
+                        value={editProduct.description}
+                        onChange={(e) =>
+                          handleEditProductChange("description", e.target.value)
+                        }
+                        placeholder="Описание"
+                      />
+                    </label>
+                    <label
+                      style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: 6,
+                      }}
+                    >
+                      Изображение
+                      <label
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 10,
+                          flexDirection: "row",
+                        }}
+                      >
+                        <label className="admin-file-btn">
+                          <input
+                            type="file"
+                            accept="image/*"
+                            style={{ display: "none" }}
+                            onChange={handleEditFileChange}
+                          />
+                          <span>Выбрать изображение</span>
+                        </label>
+                        {editImagePreview && (
+                          <img
+                            src={editImagePreview}
+                            alt="preview"
+                            style={{
+                              maxWidth: 80,
+                              maxHeight: 80,
+                              borderRadius: 8,
+                              border: "1px solid #ccc",
+                              marginLeft: 0,
+                            }}
+                          />
+                        )}
+                      </label>
+                    </label>
+                    <div className="admin-modal-actions">
+                      <button
+                        className="admin-btn"
+                        onClick={() => {
+                          closeEditModal();
+                          setModalError("");
+                        }}
+                      >
+                        Отмена
+                      </button>
+                      <button
+                        className="admin-btn"
+                        style={{ minWidth: 120 }}
+                        onClick={async () => {
+                          setModalError("");
+                          try {
+                            await handleEditProductSave();
+                          } catch (e) {
+                            setModalError(
+                              e.message || "Ошибка редактирования товара"
+                            );
+                          }
+                        }}
+                      >
+                        Сохранить
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         ) : activeTable === "categories" ? (
           <div>
@@ -452,20 +709,12 @@ function AdminPage() {
               >
                 Добавить категорию
               </button>
-              <button
-                className="admin-btn"
-                style={{ minWidth: 170 }}
-                onClick={handleSave}
-              >
-                Сохранить изменения
-              </button>
             </div>
             <table className="admin-table">
               <thead>
                 <tr>
                   <th>ID</th>
                   <th>Название</th>
-                  <th></th>
                 </tr>
               </thead>
               <tbody>
@@ -474,24 +723,15 @@ function AdminPage() {
                     c.name.toLowerCase().includes(filter.toLowerCase())
                   )
                   .map((c) => (
-                    <tr key={c.id}>
+                    <tr
+                      key={c.id}
+                      onClick={() =>
+                        setModal({ open: true, type: "edit-category", data: c })
+                      }
+                      style={{ cursor: "pointer" }}
+                    >
                       <td>{c.id}</td>
-                      <td>
-                        <input
-                          value={c.name}
-                          onChange={(e) =>
-                            handleEdit(c.id, "name", e.target.value)
-                          }
-                        />
-                      </td>
-                      <td>
-                        <button
-                          className="admin-btn danger"
-                          onClick={() => handleDeleteCategory(c.name)}
-                        >
-                          Удалить
-                        </button>
-                      </td>
+                      <td>{c.name}</td>
                     </tr>
                   ))}
               </tbody>
@@ -499,26 +739,141 @@ function AdminPage() {
             <AdminModal
               open={modal.open && modal.type === "category"}
               title="Добавить категорию"
-              onClose={closeModal}
+              onClose={() => {
+                closeModal();
+                setModalError("");
+              }}
             >
               <div
                 style={{ display: "flex", flexDirection: "column", gap: 14 }}
               >
+                {modalError && (
+                  <div
+                    style={{
+                      color: "#d32f2f",
+                      fontWeight: 500,
+                      marginBottom: 4,
+                    }}
+                  >
+                    {modalError}
+                  </div>
+                )}
                 <input id="add-category-name" placeholder="Название" />
                 <div className="admin-modal-actions">
-                  <button className="admin-btn" onClick={closeModal}>
+                  <button
+                    className="admin-btn"
+                    onClick={() => {
+                      closeModal();
+                      setModalError("");
+                    }}
+                  >
                     Отмена
                   </button>
                   <button
                     className="admin-btn"
                     style={{ minWidth: 120 }}
-                    onClick={() => {
+                    onClick={async () => {
+                      setModalError("");
                       const name =
                         document.querySelector("#add-category-name").value;
-                      handleAddCategory({ name });
+                      try {
+                        await handleAddCategory({ name });
+                      } catch (e) {
+                        setModalError(
+                          e.message || "Ошибка добавления категории"
+                        );
+                      }
                     }}
                   >
                     Добавить
+                  </button>
+                </div>
+              </div>
+            </AdminModal>
+            <AdminModal
+              open={modal.open && modal.type === "edit-category"}
+              title="Редактировать категорию"
+              onClose={() => {
+                closeModal();
+                setModalError("");
+              }}
+            >
+              <div
+                style={{ display: "flex", flexDirection: "column", gap: 14 }}
+              >
+                {modalError && (
+                  <div
+                    style={{
+                      color: "#d32f2f",
+                      fontWeight: 500,
+                      marginBottom: 4,
+                    }}
+                  >
+                    {modalError}
+                  </div>
+                )}
+                <label>
+                  Название
+                  <input
+                    value={modal.data?.name || ""}
+                    onChange={(e) =>
+                      setModal((m) => ({
+                        ...m,
+                        data: { ...m.data, name: e.target.value },
+                      }))
+                    }
+                    placeholder="Название"
+                  />
+                </label>
+                <div className="admin-modal-actions">
+                  <button
+                    className="admin-btn"
+                    onClick={() => {
+                      closeModal();
+                      setModalError("");
+                    }}
+                  >
+                    Отмена
+                  </button>
+                  <button
+                    className="admin-btn"
+                    style={{ minWidth: 120 }}
+                    onClick={async () => {
+                      setModalError("");
+                      setLoading(true);
+                      const oldName =
+                        categories.find((c) => c.id === modal.data.id)?.name ||
+                        "";
+                      try {
+                        const res = await fetch(
+                          `/categories/change-category-name`,
+                          {
+                            method: "PUT",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({
+                              oldName,
+                              newName: modal.data.name,
+                            }),
+                          }
+                        );
+                        if (!res.ok) {
+                          const err = await res.json();
+                          throw new Error(
+                            err.message || "Ошибка смены категории"
+                          );
+                        }
+                        closeModal();
+                        fetch("/categories/get-all-categories")
+                          .then((r) => r.json())
+                          .then(setCategories)
+                          .finally(() => setLoading(false));
+                      } catch (e) {
+                        setModalError(e.message || "Ошибка смены категории");
+                        setLoading(false);
+                      }
+                    }}
+                  >
+                    Сохранить
                   </button>
                 </div>
               </div>
@@ -546,30 +901,15 @@ function AdminPage() {
                   minWidth: 220,
                 }}
               />
-              <button
-                className="admin-btn"
-                style={{ minWidth: 140 }}
-                onClick={() => openAddModal("user")}
-              >
-                Добавить пользователя
-              </button>
-              <button
-                className="admin-btn"
-                style={{ minWidth: 170 }}
-                onClick={handleSave}
-              >
-                Сохранить изменения
-              </button>
             </div>
             <table className="admin-table">
               <thead>
                 <tr>
                   <th>ID</th>
-                  <th>Email</th>
                   <th>Имя</th>
+                  <th>Email</th>
                   <th>Роль</th>
                   <th>Последнее изменение имени</th>
-                  <th></th>
                 </tr>
               </thead>
               <tbody>
@@ -578,47 +918,21 @@ function AdminPage() {
                     u.email.toLowerCase().includes(filter.toLowerCase())
                   )
                   .map((u) => (
-                    <tr key={u.id}>
+                    <tr
+                      key={u.id}
+                      onClick={() =>
+                        setModal({ open: true, type: "edit-user", data: u })
+                      }
+                      style={{ cursor: "pointer" }}
+                    >
                       <td>{u.id}</td>
-                      <td>
-                        <input
-                          value={u.email}
-                          onChange={(e) =>
-                            handleEdit(u.id, "email", e.target.value)
-                          }
-                        />
-                      </td>
-                      <td>
-                        <input
-                          value={u.username}
-                          onChange={(e) =>
-                            handleEdit(u.id, "username", e.target.value)
-                          }
-                        />
-                      </td>
-                      <td>
-                        <select
-                          value={u.role ? "admin" : "user"}
-                          onChange={(e) =>
-                            handleEdit(u.id, "role", e.target.value === "admin")
-                          }
-                        >
-                          <option value="user">user</option>
-                          <option value="admin">admin</option>
-                        </select>
-                      </td>
+                      <td>{u.username}</td>
+                      <td>{u.email}</td>
+                      <td>{u.role ? "Админ" : "Пользователь"}</td>
                       <td>
                         {u.lastUsernameChange
                           ? new Date(u.lastUsernameChange).toLocaleString()
                           : "-"}
-                      </td>
-                      <td>
-                        <button
-                          className="admin-btn danger"
-                          onClick={() => handleDelete(u.id)}
-                        >
-                          Удалить
-                        </button>
                       </td>
                     </tr>
                   ))}
@@ -648,73 +962,202 @@ function AdminPage() {
                 </div>
               </div>
             </AdminModal>
+            <AdminModal
+              open={modal.open && modal.type === "edit-user"}
+              title="Изменить данные"
+              onClose={closeModal}
+            >
+              <div
+                style={{ display: "flex", flexDirection: "column", gap: 14 }}
+              >
+                <label>
+                  Email
+                  <div
+                    style={{
+                      padding: "8px 0",
+                      color: "var(--text-main, #222)",
+                    }}
+                  >
+                    {modal.data?.email || ""}
+                  </div>
+                </label>
+                <label>
+                  Имя
+                  <div
+                    style={{
+                      padding: "8px 0",
+                      color: "var(--text-main, #222)",
+                    }}
+                  >
+                    {modal.data?.username || ""}
+                  </div>
+                </label>
+                <label>
+                  Роль
+                  <select
+                    value={modal.data?.role ? "admin" : "user"}
+                    onChange={(e) =>
+                      setModal((m) => ({
+                        ...m,
+                        data: { ...m.data, role: e.target.value === "admin" },
+                      }))
+                    }
+                  >
+                    <option value="user">Пользователь</option>
+                    <option value="admin">Админ</option>
+                  </select>
+                </label>
+                <div className="admin-modal-actions">
+                  <button className="admin-btn" onClick={closeModal}>
+                    Отмена
+                  </button>
+                  <button
+                    className="admin-btn"
+                    style={{ minWidth: 120 }}
+                    onClick={async () => {
+                      setLoading(true);
+                      console.log({
+                        email: modal.data.email,
+                        role: modal.data.role,
+                      });
+                      await fetch(`/users/change-role`, {
+                        method: "PUT",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                          email: modal.data.email,
+                          role: modal.data.role,
+                        }),
+                      });
+                      closeModal();
+                      fetch("/users")
+                        .then((r) => r.json())
+                        .then(setUsers)
+                        .finally(() => setLoading(false));
+                    }}
+                  >
+                    Сохранить
+                  </button>
+                </div>
+              </div>
+            </AdminModal>
           </div>
         ) : activeTable === "orders" ? (
           <div>
             <h2>Заказы</h2>
             <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 16,
+                marginBottom: 20,
+              }}
+            >
+              <label style={{ fontWeight: 500 }}>Фильтр по дате:</label>
+              <input
+                type="date"
+                value={orderDateFilter}
+                onChange={(e) => setOrderDateFilter(e.target.value)}
+                style={{
+                  padding: 6,
+                  borderRadius: 6,
+                  border: "1px solid #ccc",
+                  minWidth: 140,
+                }}
+              />
+              <button
+                className="admin-btn"
+                style={{ minWidth: 80, padding: "6px 12px" }}
+                onClick={() => setOrderDateFilter("")}
+                disabled={!orderDateFilter}
+              >
+                Сбросить
+              </button>
+            </div>
+            <div
               className="order-cards"
               style={{ justifyContent: "flex-start" }}
             >
-              {orders.map((order) => (
-                <div className="order-card" key={order.id}>
-                  <div className="order-id">Заказ №{order.id}</div>
-                  <div className="order-date">
-                    Дата: {new Date(order.createdAt).toLocaleString()}
+              {[...orders]
+                .filter(
+                  (order) =>
+                    !orderDateFilter ||
+                    new Date(order.createdAt).toISOString().slice(0, 10) ===
+                      orderDateFilter
+                )
+                .sort((a, b) => a.id - b.id)
+                .map((order) => (
+                  <div className="order-card" key={order.id}>
+                    <div className="order-id">Заказ №{order.id}</div>
+                    <div className="order-date">
+                      Дата: {new Date(order.createdAt).toLocaleString()}
+                    </div>
+                    <div className="order-status">
+                      Статус:{" "}
+                      <select
+                        className="order-status-select"
+                        value={orderStatusDraft[order.id] ?? order.status}
+                        onChange={(e) =>
+                          handleOrderStatusChange(order.id, e.target.value)
+                        }
+                        style={{
+                          padding: "6px 12px",
+                          borderRadius: 6,
+                          border: "1px solid #d32f2f",
+                          background: "var(--background-secondary, #fff)",
+                          color: "var(--text-main, #222)",
+                          fontWeight: 500,
+                          minWidth: 120,
+                          outline: "none",
+                          boxShadow: "0 1px 4px rgba(0,0,0,0.04)",
+                          transition: "border .2s, box-shadow .2s",
+                        }}
+                      >
+                        <option value="PENDING">Оформлен</option>
+                        <option value="SHIPPED">Отправлен</option>
+                        <option value="DELIVERED">Доставлен</option>
+                        <option value="CANCELLED">Отменён</option>
+                      </select>
+                      <button
+                        className="admin-btn"
+                        style={{ marginLeft: 8 }}
+                        onClick={() => handleOrderStatusSave(order.id)}
+                      >
+                        Сохранить
+                      </button>
+                    </div>
+                    <div className="order-sum">
+                      Сумма: {formatPrice(order.totalPrice)} ₽
+                    </div>
+                    <div className="order-products">
+                      <div className="order-products-title">Товары:</div>
+                      <ul className="order-products-list">
+                        {order.orderedProductDTO?.map((item) => (
+                          <li key={item.id}>
+                            <span className="order-product-name">
+                              {item.product?.name || "Товар"}
+                            </span>
+                            <span className="order-product-qty">
+                              × {item.quantity}
+                            </span>
+                            <span className="order-product-price">
+                              {formatPrice(item.priceAtPurchase)} ₽
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                    <div style={{ marginTop: 10 }}>
+                      <button
+                        className="order-receipt-btn"
+                        onClick={() =>
+                          window.open(`/api/orders/${order.id}/receipt`)
+                        }
+                      >
+                        Скачать чек
+                      </button>
+                    </div>
                   </div>
-                  <div className="order-status">
-                    Статус:{" "}
-                    <select
-                      value={orderStatusDraft[order.id] ?? order.status}
-                      onChange={(e) =>
-                        handleOrderStatusChange(order.id, e.target.value)
-                      }
-                    >
-                      <option value="created">created</option>
-                      <option value="paid">paid</option>
-                      <option value="shipped">shipped</option>
-                      <option value="completed">completed</option>
-                      <option value="cancelled">cancelled</option>
-                    </select>
-                    <button
-                      className="admin-btn"
-                      style={{ marginLeft: 8 }}
-                      onClick={() => handleOrderStatusSave(order.id)}
-                    >
-                      Сохранить
-                    </button>
-                  </div>
-                  <div className="order-sum">Сумма: {order.totalPrice} ₽</div>
-                  <div className="order-products">
-                    <div className="order-products-title">Товары:</div>
-                    <ul className="order-products-list">
-                      {order.orderedProductDTO?.map((item) => (
-                        <li key={item.id}>
-                          <span className="order-product-name">
-                            {item.product?.name || "Товар"}
-                          </span>
-                          <span className="order-product-qty">
-                            × {item.quantity}
-                          </span>
-                          <span className="order-product-price">
-                            {item.priceAtPurchase} ₽
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                  <div style={{ marginTop: 10 }}>
-                    <button
-                      className="order-receipt-btn"
-                      onClick={() =>
-                        window.open(`/api/orders/${order.id}/receipt`)
-                      }
-                    >
-                      Скачать чек
-                    </button>
-                  </div>
-                </div>
-              ))}
+                ))}
             </div>
           </div>
         ) : null}

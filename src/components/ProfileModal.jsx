@@ -10,11 +10,13 @@ export default function ProfileModal({ isOpen, onClose, username: onNameChange }
   const [daysToChange, setDaysToChange] = useState(0);
   const [newUsername, setNewUsername] = useState("");
   const [oldPassword, setOldPassword] = useState("");
-  const [newPassword, setNewPassword] = useState("");
+  const [newPassword, setNewPassword] = useState(""); 
   const [deletePassword, setDeletePassword] = useState("");
   const [showChangeUsername, setShowChangeUsername] = useState(false);
   const [showChangePassword, setShowChangePassword] = useState(false);
   const [showDeleteAccount, setShowDeleteAccount] = useState(false);
+  const [usernameError, setUsernameError] = useState("");
+  const [LASTUSERNAMECHANGE, setLastUsernameChange] = useState(null);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -36,6 +38,7 @@ export default function ProfileModal({ isOpen, onClose, username: onNameChange }
   }, [isOpen, username]);
 
   const handleChangeUsername = async () => {
+    setUsernameError("");
     try {
       const response = await fetch("/users/update-username", {
         method: "PATCH",
@@ -47,13 +50,26 @@ export default function ProfileModal({ isOpen, onClose, username: onNameChange }
         alert("Имя успешно изменено");
         localStorage.setItem("username", newUsername);
         if (onNameChange) onNameChange(newUsername);
-        onClose();
+        setTimeout(onClose, 0); // закрыть модалку после обновления
       } else {
         const data = await response.json();
-        alert(data.message || "Ошибка при смене имени");
+        // Если сервер вернул строку и timestamp последней смены
+        if (data.message && data.lastChangeTimestamp) {
+          setUsernameError(data.message);
+          setLastUsernameChange(data.lastChangeTimestamp);
+          // daysToChange вычисляем из timestamp
+          const now = Date.now();
+          const last = new Date(data.lastChangeTimestamp).getTime();
+          const days = Math.ceil((30 * 24 * 60 * 60 * 1000 - (now - last)) / (24 * 60 * 60 * 1000));
+          setDaysToChange(days > 0 ? days : 0);
+        } else if (data.message) {
+          setUsernameError(data.message);
+        } else {
+          setUsernameError("Ошибка при смене имени");
+        }
       }
-    } catch (err) {
-      alert("Ошибка сервера", err);
+    } catch {
+      setUsernameError("Ошибка сервера");
     }
   };
 
@@ -67,7 +83,8 @@ export default function ProfileModal({ isOpen, onClose, username: onNameChange }
 
       if (response.ok) {
         alert("Пароль успешно изменён");
-        onClose();
+        if (onNameChange) onNameChange(username); // обновить имя на кнопке (на всякий случай)
+        setTimeout(onClose, 0);
       } else {
         const data = await response.json();
         alert(data.message || "Ошибка при смене пароля");
@@ -90,7 +107,11 @@ export default function ProfileModal({ isOpen, onClose, username: onNameChange }
       if (response.ok) {
         alert("Аккаунт удалён");
         localStorage.clear();
-        window.location.reload();
+        if (onNameChange) onNameChange("");
+        setTimeout(() => {
+          onClose();
+          window.location.reload();
+        }, 0);
       } else {
         const data = await response.json();
         alert(data.message || "Ошибка при удалении");
@@ -136,6 +157,9 @@ export default function ProfileModal({ isOpen, onClose, username: onNameChange }
                 onChange={(e) => setNewUsername(e.target.value)}
                 className="modal-input"
               />
+              {usernameError && (
+                <p className="text-sm text-red-500 mt-1">{usernameError}</p>
+              )}
               <div className="flex-buttons">
                 <button
                   className="btn-outline"

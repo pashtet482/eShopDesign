@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import "../css/orders-list.css";
+import { formatPrice } from "../utils/formatPrice";
 
 export default function OrdersPage() {
   const [orders, setOrders] = useState([]);
@@ -67,11 +68,24 @@ export default function OrdersPage() {
         padding: 0,
       }}
     >
-      <h2 style={{ textAlign: "left", marginBottom: 32, fontSize: 32, color: "var(--text-main, #222)" }}>
+      <h2
+        style={{
+          textAlign: "left",
+          marginBottom: 32,
+          fontSize: 32,
+          color: "var(--text-main, #222)",
+        }}
+      >
         История заказов
       </h2>
       {orders.length === 0 ? (
-        <p style={{ textAlign: "left", color: "var(--text-secondary, #888)", fontSize: 20 }}>
+        <p
+          style={{
+            textAlign: "left",
+            color: "var(--text-secondary, #888)",
+            fontSize: 20,
+          }}
+        >
           У вас нет заказов.
         </p>
       ) : (
@@ -79,17 +93,27 @@ export default function OrdersPage() {
           {orders.map((order) => (
             <div className="order-card" key={order.id}>
               <div className="order-id">Заказ №{order.id}</div>
-              <div className="order-date">Дата: {new Date(order.createdAt).toLocaleString()}</div>
+              <div className="order-date">
+                Дата: {new Date(order.createdAt).toLocaleString()}
+              </div>
               <div className="order-status">Статус: {order.status}</div>
-              <div className="order-sum">Сумма: {order.totalPrice} ₽</div>
+              <div className="order-sum">
+                Сумма: {formatPrice(order.totalPrice)} ₽
+              </div>
               <div className="order-products">
                 <div className="order-products-title">Товары:</div>
                 <ul className="order-products-list">
                   {order.orderedProductDTO?.map((item) => (
                     <li key={item.id}>
-                      <span className="order-product-name">{item.product?.name || "Товар"}</span>
-                      <span className="order-product-qty">× {item.quantity}</span>
-                      <span className="order-product-price">{item.priceAtPurchase} ₽</span>
+                      <span className="order-product-name">
+                        {item.product?.name || "Товар"}
+                      </span>
+                      <span className="order-product-qty">
+                        × {item.quantity}
+                      </span>
+                      <span className="order-product-price">
+                        {formatPrice(item.priceAtPurchase)} ₽
+                      </span>
                     </li>
                   ))}
                 </ul>

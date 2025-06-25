@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import ProductModal from "../components/ProductModal";
 import { addToCart, getCart } from "../utils/cart";
+import { formatPrice } from "../utils/formatPrice";
 import "../css/btn.css";
 
 function getImageUrl(base, path, placeholder) {
@@ -31,14 +32,13 @@ export default function Catalog({ search }) {
 
   useEffect(() => {
     const updateCart = () => {
-      setCart([...getCart()]); // Создаем новый массив для триггера обновления
+      setCart([...getCart()]);
     };
     window.addEventListener("cart-updated", updateCart);
     return () => window.removeEventListener("cart-updated", updateCart);
   }, []);
 
   useEffect(() => {
-    // Если пользователь разлогинился, сбрасываем все данные пользователя
     const onStorage = (e) => {
       if (
         e.key === "username" ||
@@ -126,7 +126,7 @@ export default function Catalog({ search }) {
                   />
                   <h3>{p.name}</h3>
                   <p>{p.description}</p>
-                  <p>{p.price} ₽</p>
+                  <p>{formatPrice(p.price)} ₽</p>
                   <p
                     className="stock"
                     style={

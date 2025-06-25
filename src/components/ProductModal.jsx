@@ -1,10 +1,8 @@
 import styles from "../css/ProductModal.module.css";
 import "../css/modals.css";
 import "../css/cards.css";
-import {
-  addToCart,
-  getCart
-} from "../utils/cart";
+import { addToCart, getCart } from "../utils/cart";
+import { formatPrice } from "../utils/formatPrice";
 import { useEffect, useState } from "react";
 
 function getImageUrl(base, path) {
@@ -61,7 +59,7 @@ export default function ProductModal({ product, onClose }) {
           <h2>{product.name}</h2>
           <ul className={styles["detail-list"]}>
             <li>
-              <strong>Цена:</strong> {product.price} ₽
+              <strong>Цена:</strong> {formatPrice(product.price)} ₽
             </li>
             <li>
               <strong>Категория:</strong> {product.category?.name || "—"}
