@@ -26,6 +26,23 @@ export default function CartPage({ isDark }) {
     return () => window.removeEventListener("cart-updated", updateCart);
   }, []);
 
+  useEffect(() => {
+    // Если пользователь разлогинился, сбрасываем все данные пользователя
+    const onStorage = (e) => {
+      if (
+        e.key === "username" ||
+        e.key === "userId" ||
+        e.key === "email" ||
+        e.key === "isAdmin"
+      ) {
+        // Можно добавить сброс состояния, если нужно
+        // Например, window.location.reload();
+      }
+    };
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, []);
+
   const handleRemove = (id) => {
     removeFromCart(id);
     setCart(getCart());
@@ -233,7 +250,7 @@ export default function CartPage({ isDark }) {
                 quantity: item.quantity,
               }));
               try {
-                const res = await fetch("/orders/create-order", {
+                const res = await fetch("/api/orders/create-order", {
                   method: "POST",
                   headers: { "Content-Type": "application/json" },
                   body: JSON.stringify({ userId, orderItems }),

@@ -51,8 +51,11 @@ export default function Layout({
   const handleLogout = () => {
     localStorage.removeItem("username");
     localStorage.removeItem("isAdmin");
+    localStorage.removeItem("email");
+    localStorage.removeItem("userId");
     setUsername("");
     setIsAdmin(false);
+    setEmail(null);
     navigate("/");
   };
 

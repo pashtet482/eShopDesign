@@ -37,6 +37,23 @@ export default function Catalog({ search }) {
     return () => window.removeEventListener("cart-updated", updateCart);
   }, []);
 
+  useEffect(() => {
+    // Если пользователь разлогинился, сбрасываем все данные пользователя
+    const onStorage = (e) => {
+      if (
+        e.key === "username" ||
+        e.key === "userId" ||
+        e.key === "email" ||
+        e.key === "isAdmin"
+      ) {
+        // Можно добавить сброс состояния, если нужно
+        // Например, window.location.reload();
+      }
+    };
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, []);
+
   const filtered = products
     .filter((p) => p.name.toLowerCase().includes(search.toLowerCase()))
     .filter((p) => !selectedCategory || p.category?.id === selectedCategory);

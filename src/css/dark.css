@@ -1,3 +1,15 @@
+.dark-mode {
+  --background-main: #181818;
+  --background-secondary: #232323;
+  --text-main: #f3f3f3;
+  --text-secondary: #b0b0b0;
+  --accent-color: #90caf9;
+  --danger-color: #ef5350;
+  --button-text: #fff;
+  --border-color: #333;
+  --shadow-color: #0006;
+}
+
 .dark-mode .card {
   background-color: var(--card-bg-dark);
 }

@@ -6,4 +6,14 @@
   --text-dark: #000000;
   --card-bg-light: #f9f9f9;
   --card-bg-dark: #1e1e1e;
+  /* Для orders-list.jsx */
+  --background-main: #fff;
+  --background-secondary: #f9f9f9;
+  --text-main: #222;
+  --text-secondary: #888;
+  --accent-color: #1976d2;
+  --danger-color: #d32f2f;
+  --button-text: #fff;
+  --border-color: #eee;
+  --shadow-color: #0001;
 }
