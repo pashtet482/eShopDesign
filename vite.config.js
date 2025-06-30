@@ -6,10 +6,10 @@ export default defineConfig({
   plugins: [react()],
   server: {
     proxy: {
-      '/products': 'http://localhost:8080',
-      '/categories': 'http://localhost:8080',
-      '/users': 'http://localhost:8080',
-      '/api/orders': 'http://localhost:8080',
+      '/products': 'http://b438c344c53a.vps.myjino.ru',
+      '/categories': 'http://b438c344c53a.vps.myjino.ru',
+      '/users': 'http://b438c344c53a.vps.myjino.ru',
+      '/api/orders': 'http://b438c344c53a.vps.myjino.ru',
     }
   }
 })

@@ -37,10 +37,10 @@ export default function LoginModal({ isOpen, onClose, onLogin }) {
       let body = {};
 
       if (mode === "login") {
-        url = "/users/login";
+        url = "/api/users/login";
         body = { email, password };
       } else {
-        url = "/users/create-user";
+        url = "/api/users/create-user";
         body = { username, email, password };
       }
 
@@ -65,6 +65,12 @@ export default function LoginModal({ isOpen, onClose, onLogin }) {
             (mode === "login" ? "Ошибка входа" : "Ошибка регистрации")
         );
       } else {
+        // userId теперь всегда приходит с сервера
+        if (!data?.userId) {
+          setError("Ошибка регистрации: не получен userId. Попробуйте ещё раз.");
+          setLoading(false);
+          return;
+        }
         localStorage.setItem("username", data.username);
         localStorage.setItem("isAdmin", (data.isAdmin || false).toString());
         localStorage.setItem("userId", data.userId);

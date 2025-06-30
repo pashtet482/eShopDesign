@@ -2,9 +2,8 @@ import React, { useEffect, useState } from "react";
 import "../css/modals.css";
 import "../css/form&input.css";
 
-export default function ProfileModal({ isOpen, onClose, username: onNameChange }) {
-  const username = localStorage.getItem("username");
-
+export default function ProfileModal({ isOpen, onClose, username, onNameChange }) {
+  const [localUsername, setLocalUsername] = useState(localStorage.getItem("username") || "");
   const [email, setEmail] = useState("");
   const [createdAt, setCreatedAt] = useState(null);
   const [daysToChange, setDaysToChange] = useState(0);
@@ -15,17 +14,14 @@ export default function ProfileModal({ isOpen, onClose, username: onNameChange }
   const [showChangeUsername, setShowChangeUsername] = useState(false);
   const [showChangePassword, setShowChangePassword] = useState(false);
   const [showDeleteAccount, setShowDeleteAccount] = useState(false);
-  const [usernameError, setUsernameError] = useState("");
-  const [LASTUSERNAMECHANGE, setLastUsernameChange] = useState(null);
 
   useEffect(() => {
     if (!isOpen) return;
-
+    setLocalUsername(localStorage.getItem("username") || "");
     const fetchProfile = async () => {
       try {
-        const response = await fetch(`/users/profile-${username}`);
+        const response = await fetch(`/api/users/profile-${localStorage.getItem("username")}`);
         const data = await response.json();
-
         setEmail(data.email);
         setCreatedAt(new Date(data["Creation date"]));
         setDaysToChange(data["Days to change username"]);
@@ -33,103 +29,97 @@ export default function ProfileModal({ isOpen, onClose, username: onNameChange }
         console.error("Ошибка загрузки профиля:", error);
       }
     };
-
     fetchProfile();
-  }, [isOpen, username]);
+  }, [isOpen]);
+
+  const handleModalClose = () => {
+    setShowChangeUsername(false);
+    setShowChangePassword(false);
+    setShowDeleteAccount(false);
+    setNewUsername("");
+    setOldPassword("");
+    setNewPassword("");
+    setDeletePassword("");
+    onClose();
+  };
 
   const handleChangeUsername = async () => {
-    setUsernameError("");
     try {
-      const response = await fetch("/users/update-username", {
+      const response = await fetch("/api/users/update-username", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ oldUsername: username, newUsername }),
+        body: JSON.stringify({ oldUsername: localUsername, newUsername }),
       });
-
       if (response.ok) {
-        alert("Имя успешно изменено");
         localStorage.setItem("username", newUsername);
-        if (onNameChange) onNameChange(newUsername);
-        setTimeout(onClose, 0); // закрыть модалку после обновления
-      } else {
-        const data = await response.json();
-        // Если сервер вернул строку и timestamp последней смены
-        if (data.message && data.lastChangeTimestamp) {
-          setUsernameError(data.message);
-          setLastUsernameChange(data.lastChangeTimestamp);
-          // daysToChange вычисляем из timestamp
-          const now = Date.now();
-          const last = new Date(data.lastChangeTimestamp).getTime();
-          const days = Math.ceil((30 * 24 * 60 * 60 * 1000 - (now - last)) / (24 * 60 * 60 * 1000));
-          setDaysToChange(days > 0 ? days : 0);
-        } else if (data.message) {
-          setUsernameError(data.message);
-        } else {
-          setUsernameError("Ошибка при смене имени");
-        }
+        setLocalUsername(newUsername);
+        if (onNameChange) onNameChange(newUsername); // обновляем Layout сразу
+        // alert должен быть до handleModalClose, иначе не покажется
+        alert("Имя успешно изменено");
+        handleModalClose();
+        return;
       }
+      handleModalClose();
     } catch {
-      setUsernameError("Ошибка сервера");
+      handleModalClose();
     }
   };
 
   const handleChangePassword = async () => {
     try {
-      const response = await fetch("/users/change-password", {
+      const response = await fetch("/api/users/change-password", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, oldPassword, newPassword }),
+        body: JSON.stringify({ username: localUsername, oldPassword, newPassword }),
       });
-
       if (response.ok) {
+        setOldPassword("");
+        setNewPassword("");
+        setShowChangePassword(false);
         alert("Пароль успешно изменён");
-        if (onNameChange) onNameChange(username); // обновить имя на кнопке (на всякий случай)
-        setTimeout(onClose, 0);
-      } else {
-        const data = await response.json();
-        alert(data.message || "Ошибка при смене пароля");
+        handleModalClose();
+        return;
       }
-    } catch (err) {
-      alert("Ошибка сервера", err);
+      handleModalClose();
+    } catch {
+      handleModalClose();
     }
   };
 
   const handleDeleteAccount = async () => {
     if (!window.confirm("Вы уверены, что хотите удалить аккаунт?")) return;
-
     try {
-      const response = await fetch("/users/delete-user", {
+      const response = await fetch("/api/users/delete-user", {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, password: deletePassword }),
+        body: JSON.stringify({ username: localUsername, password: deletePassword }),
       });
-
       if (response.ok) {
-        alert("Аккаунт удалён");
         localStorage.clear();
+        setLocalUsername("");
+        setDeletePassword("");
+        setShowDeleteAccount(false);
         if (onNameChange) onNameChange("");
-        setTimeout(() => {
-          onClose();
-          window.location.reload();
-        }, 0);
-      } else {
-        const data = await response.json();
-        alert(data.message || "Ошибка при удалении");
+        alert("Аккаунт удалён");
+        handleModalClose();
+        window.location.reload();
+        return;
       }
-    } catch (err) {
-      alert("Ошибка сервера", err);
+      handleModalClose();
+    } catch {
+      handleModalClose();
     }
   };
 
   if (!isOpen) return null;
 
   return (
-    <div className="modal" onClick={onClose}>
+    <div className="modal" onClick={handleModalClose}>
       <div className="modal-content" onClick={(e) => e.stopPropagation()}>
         <h2 className="text-xl font-bold mb-4">Профиль</h2>
 
         <p>
-          <strong>Имя:</strong> {username}
+          <strong>Имя:</strong> {localUsername}
         </p>
         <p>
           <strong>Email:</strong> {email}
@@ -157,9 +147,6 @@ export default function ProfileModal({ isOpen, onClose, username: onNameChange }
                 onChange={(e) => setNewUsername(e.target.value)}
                 className="modal-input"
               />
-              {usernameError && (
-                <p className="text-sm text-red-500 mt-1">{usernameError}</p>
-              )}
               <div className="flex-buttons">
                 <button
                   className="btn-outline"

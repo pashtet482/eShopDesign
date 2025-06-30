@@ -21,11 +21,11 @@ export default function Catalog({ search }) {
   const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
   useEffect(() => {
-    fetch("/products/products")
+    fetch("/api/products/products")
       .then((res) => res.json())
       .then(setProducts);
 
-    fetch("/categories/get-all-categories")
+    fetch("/api/categories/get-all-categories")
       .then((res) => res.json())
       .then(setCategories);
   }, []);

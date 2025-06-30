@@ -53,6 +53,8 @@ export default function Layout({
     localStorage.removeItem("isAdmin");
     localStorage.removeItem("email");
     localStorage.removeItem("userId");
+    localStorage.removeItem("cart"); // сбрасываем корзину при выходе
+    window.dispatchEvent(new CustomEvent('cart-updated'));
     setUsername("");
     setIsAdmin(false);
     setEmail(null);

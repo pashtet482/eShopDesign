@@ -6,10 +6,10 @@ import "../css/admin-panel.css";
 import { formatPrice } from "../utils/formatPrice";
 
 const TABLES = [
-  { key: "products", label: "Товары" },
-  { key: "categories", label: "Категории" },
-  { key: "users", label: "Пользователи" },
-  { key: "orders", label: "Заказы" },
+  { key: "products-admin", label: "Товары" },
+  { key: "categories-admin", label: "Категории" },
+  { key: "users-admin", label: "Пользователи" },
+  { key: "orders-admin", label: "Заказы" },
 ];
 
 function AdminModal({ open, title, children, onClose }) {
@@ -28,19 +28,19 @@ function AdminModal({ open, title, children, onClose }) {
 }
 
 function AdminPage() {
-  const [activeTable, setActiveTable] = useState("products");
+  const [activeTable, setActiveTable] = useState("products-admin");
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [users, setUsers] = useState([]);
-  const [orders, setOrders] = useState([]);
+  const [adminOrders, setAdminOrders] = useState([]);
   const [loading, setLoading] = useState(false);
   const [filter, setFilter] = useState("");
-  const [orderStatusDraft, setOrderStatusDraft] = useState({});
+  const [adminOrderStatusDraft, setAdminOrderStatusDraft] = useState({});
   const [modal, setModal] = useState({ open: false, type: null });
   const [MODALDATA, setModalData] = useState({});
   const [file, setFile] = useState(null);
   const [imagePreview, setImagePreview] = useState("");
-  const [orderDateFilter, setOrderDateFilter] = useState("");
+  const [adminOrderDateFilter, setAdminOrderDateFilter] = useState("");
   const [editProduct, setEditProduct] = useState(null);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [editFile, setEditFile] = useState(null);
@@ -53,7 +53,7 @@ function AdminPage() {
     if (!file) return "";
     const formData = new FormData();
     formData.append("file", file);
-    const res = await fetch("/products/product-image", {
+    const res = await fetch("/api/products/product-image", {
       method: "POST",
       body: formData,
     });
@@ -69,34 +69,34 @@ function AdminPage() {
 
   useEffect(() => {
     setLoading(true);
-    if (activeTable === "products") {
-      fetch("/products/products")
+    if (activeTable === "products-admin") {
+      fetch("/api/products/products")
         .then((r) => r.json())
         .then(setProducts)
         .finally(() => setLoading(false));
-      fetch("/categories/get-all-categories")
+      fetch("/api/categories/get-all-categories")
         .then((r) => r.json())
         .then(setCategories);
-    } else if (activeTable === "categories") {
-      fetch("/categories/get-all-categories")
+    } else if (activeTable === "categories-admin") {
+      fetch("/api/categories/get-all-categories")
         .then((r) => r.json())
         .then(setCategories)
         .finally(() => setLoading(false));
-    } else if (activeTable === "users") {
-      fetch("/users")
+    } else if (activeTable === "users-admin") {
+      fetch("/api/users/get-all-users")
         .then((r) => r.json())
         .then(setUsers)
         .finally(() => setLoading(false));
-    } else if (activeTable === "orders") {
-      fetch("/api/orders")
+    } else if (activeTable === "orders-admin") {
+      fetch("/api/orders/get-all-orders")
         .then((r) => r.json())
-        .then(setOrders)
+        .then(setAdminOrders)
         .finally(() => setLoading(false));
     }
   }, [activeTable]);
 
-  const handleOrderStatusChange = (orderId, newStatus) => {
-    setOrderStatusDraft((prev) => ({ ...prev, [orderId]: newStatus }));
+  const handleAdminOrderStatusChange = (orderId, newStatus) => {
+    setAdminOrderStatusDraft((prev) => ({ ...prev, [orderId]: newStatus }));
   };
   const statusRuToEn = {
     Оформлен: "PENDING",
@@ -104,10 +104,10 @@ function AdminPage() {
     Доставлен: "DELIVERED",
     Отменён: "CANCELLED",
   };
-  const handleOrderStatusSave = async (orderId) => {
+  const handleAdminOrderStatusSave = async (orderId) => {
     setLoading(true);
     const ruStatus =
-      orderStatusDraft[orderId] ?? orders.find((o) => o.id === orderId)?.status;
+      adminOrderStatusDraft[orderId] ?? adminOrders.find((o) => o.id === orderId)?.status;
     const newStatus = statusRuToEn[ruStatus] || ruStatus;
     try {
       await fetch("/api/orders/change-status", {
@@ -115,9 +115,9 @@ function AdminPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id: orderId, status: newStatus }),
       });
-      fetch("/api/orders")
+      fetch("/api/orders/get-all-orders")
         .then((r) => r.json())
-        .then(setOrders)
+        .then(setAdminOrders)
         .finally(() => setLoading(false));
     } catch {
       setLoading(false);
@@ -138,7 +138,7 @@ function AdminPage() {
       imageUrl = await uploadProductImage(file);
     }
     try {
-      const res = await fetch("/products/create-product", {
+      const res = await fetch("/api/products/create-product", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...data, imageUrl }),
@@ -150,7 +150,7 @@ function AdminPage() {
       setModal({ open: false, type: null });
       setFile(null);
       setImagePreview("");
-      fetch("/products/products")
+      fetch("/api/products/products")
         .then((r) => r.json())
         .then(setProducts)
         .finally(() => setLoading(false));
@@ -163,7 +163,7 @@ function AdminPage() {
   const handleAddCategory = async (data) => {
     setLoading(true);
     try {
-      const res = await fetch("/categories/create-category", {
+      const res = await fetch("/api/categories/create-category", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
@@ -173,7 +173,7 @@ function AdminPage() {
         throw new Error(err.message || "Ошибка добавления категории");
       }
       setModal({ open: false, type: null });
-      fetch("/categories/get-all-categories")
+      fetch("/api/categories/get-all-categories")
         .then((r) => r.json())
         .then(setCategories)
         .finally(() => setLoading(false));
@@ -231,7 +231,7 @@ function AdminPage() {
       },
     };
     try {
-      const res = await fetch(`/products/update-product/${editProduct.id}`, {
+      const res = await fetch(`/api/products/update-product/${editProduct.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(updated),
@@ -295,7 +295,7 @@ function AdminPage() {
       <main style={{ flex: 1, padding: 32 }}>
         {loading ? (
           <div>Загрузка...</div>
-        ) : activeTable === "products" ? (
+        ) : activeTable === "products-admin" ? (
           <div>
             <h2>Товары</h2>
             <div
@@ -680,7 +680,7 @@ function AdminPage() {
               </div>
             )}
           </div>
-        ) : activeTable === "categories" ? (
+        ) : activeTable === "categories-admin" ? (
           <div>
             <h2>Категории</h2>
             <div
@@ -846,7 +846,7 @@ function AdminPage() {
                         "";
                       try {
                         const res = await fetch(
-                          `/categories/change-category-name`,
+                          `/api/categories/change-category-name`,
                           {
                             method: "PUT",
                             headers: { "Content-Type": "application/json" },
@@ -863,7 +863,7 @@ function AdminPage() {
                           );
                         }
                         closeModal();
-                        fetch("/categories/get-all-categories")
+                        fetch("/api/categories/get-all-categories")
                           .then((r) => r.json())
                           .then(setCategories)
                           .finally(() => setLoading(false));
@@ -879,7 +879,7 @@ function AdminPage() {
               </div>
             </AdminModal>
           </div>
-        ) : activeTable === "users" ? (
+        ) : activeTable === "users-admin" ? (
           <div>
             <h2>Пользователи</h2>
             <div
@@ -1020,7 +1020,7 @@ function AdminPage() {
                         email: modal.data.email,
                         role: modal.data.role,
                       });
-                      await fetch(`/users/change-role`, {
+                      await fetch(`/api/users/change-role`, {
                         method: "PUT",
                         headers: { "Content-Type": "application/json" },
                         body: JSON.stringify({
@@ -1029,7 +1029,7 @@ function AdminPage() {
                         }),
                       });
                       closeModal();
-                      fetch("/users")
+                      fetch("/api/users/get-all-users")
                         .then((r) => r.json())
                         .then(setUsers)
                         .finally(() => setLoading(false));
@@ -1041,7 +1041,7 @@ function AdminPage() {
               </div>
             </AdminModal>
           </div>
-        ) : activeTable === "orders" ? (
+        ) : activeTable === "orders-admin" ? (
           <div>
             <h2>Заказы</h2>
             <div
@@ -1055,8 +1055,8 @@ function AdminPage() {
               <label style={{ fontWeight: 500 }}>Фильтр по дате:</label>
               <input
                 type="date"
-                value={orderDateFilter}
-                onChange={(e) => setOrderDateFilter(e.target.value)}
+                value={adminOrderDateFilter}
+                onChange={(e) => setAdminOrderDateFilter(e.target.value)}
                 style={{
                   padding: 6,
                   borderRadius: 6,
@@ -1067,8 +1067,8 @@ function AdminPage() {
               <button
                 className="admin-btn"
                 style={{ minWidth: 80, padding: "6px 12px" }}
-                onClick={() => setOrderDateFilter("")}
-                disabled={!orderDateFilter}
+                onClick={() => setAdminOrderDateFilter("")}
+                disabled={!adminOrderDateFilter}
               >
                 Сбросить
               </button>
@@ -1077,12 +1077,12 @@ function AdminPage() {
               className="order-cards"
               style={{ justifyContent: "flex-start" }}
             >
-              {[...orders]
+              {[...adminOrders]
                 .filter(
                   (order) =>
-                    !orderDateFilter ||
+                    !adminOrderDateFilter ||
                     new Date(order.createdAt).toISOString().slice(0, 10) ===
-                      orderDateFilter
+                      adminOrderDateFilter
                 )
                 .sort((a, b) => a.id - b.id)
                 .map((order) => (
@@ -1095,9 +1095,9 @@ function AdminPage() {
                       Статус:{" "}
                       <select
                         className="order-status-select"
-                        value={orderStatusDraft[order.id] ?? order.status}
+                        value={adminOrderStatusDraft[order.id] ?? order.status}
                         onChange={(e) =>
-                          handleOrderStatusChange(order.id, e.target.value)
+                          handleAdminOrderStatusChange(order.id, e.target.value)
                         }
                         style={{
                           padding: "6px 12px",
@@ -1120,7 +1120,7 @@ function AdminPage() {
                       <button
                         className="admin-btn"
                         style={{ marginLeft: 8 }}
-                        onClick={() => handleOrderStatusSave(order.id)}
+                        onClick={() => handleAdminOrderStatusSave(order.id)}
                       >
                         Сохранить
                       </button>

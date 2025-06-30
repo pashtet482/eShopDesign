@@ -2,6 +2,13 @@ import { useEffect, useState } from "react";
 import "../css/orders-list.css";
 import { formatPrice } from "../utils/formatPrice";
 
+const statusMap = {
+  PENDING: "Оформлен",
+  SHIPPED: "Отправлен",
+  DELIVERED: "Доставлен",
+  CANCELLED: "Отменён",
+};
+
 export default function OrdersPage() {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -96,7 +103,9 @@ export default function OrdersPage() {
               <div className="order-date">
                 Дата: {new Date(order.createdAt).toLocaleString()}
               </div>
-              <div className="order-status">Статус: {order.status}</div>
+              <div className="order-status">
+                Статус: {statusMap[order.status] || order.status}
+              </div>
               <div className="order-sum">
                 Сумма: {formatPrice(order.totalPrice)} ₽
               </div>
